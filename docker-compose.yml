@@ -1,62 +1,28 @@
-version: '3.8'
+version: '3'
 services:
-
     app:
-        image: zeropingheroes/lanager:develop
-        container_name: app
+        image: mintopia/lanager:develop
+        container_name: lanager_app
         restart: unless-stopped
-        tty: true
         ports:
-            - "80:8080"
-        working_dir: /var/www/lanager
+            - "8080:8080"
         volumes:
-            - laravel-storage:/var/www/lanager/storage
-            - ./configs/app/php.ini:/etc/php7/conf.d/lanager.ini
-            - ./configs/app/nginx.conf:/etc/nginx/conf.d/lanager.conf
-        environment:
-            APP_NAME: ${APP_NAME:-LANager}
-            APP_ENV: ${APP_ENV:-production}
-            APP_KEY: ${APP_KEY}
-            APP_DEBUG: ${APP_DEBUG:-false}
-            APP_URL: ${APP_URL}
-            APP_TIMEZONE: ${APP_TIMEZONE}
-            APP_LOCALE: ${APP_LOCALE:-en}
-            STEAM_API_KEY: ${STEAM_API_KEY}
-            GOOGLE_API_KEY: ${GOOGLE_API_KEY}
-            DB_CONNECTION: ${DB_CONNECTION:-mysql}
-            DB_HOST: ${DB_HOST:-db}
-            DB_PORT: ${DB_PORT:-3306}
-            DB_DATABASE: ${DB_DATABASE:-lanager}
-            DB_USERNAME: ${DB_USERNAME:-lanager}
-            DB_PASSWORD: ${DB_PASSWORD}
-            DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-            CACHE_DRIVER: ${CACHE_DRIVER:-file}
-            SESSION_DRIVER: ${SESSION_DRIVER:-database}
-            SESSION_LIFETIME: ${SESSION_LIFETIME:-7200}
-            LOG_CHANNEL: ${LOG_CHANNEL:-stdout}
-        networks:
-            - app-network
+            - laravel-storage:/var/www/storage
         depends_on:
-            - db
-        labels:
-            ofelia.enabled: "true"
-            ofelia.job-exec.artisan-schedule-run.schedule: "@every 1m"
-            ofelia.job-exec.artisan-schedule-run.command: "php /var/www/lanager/artisan schedule:run"
+            - database
     scheduler:
-        image: mcuadros/ofelia:latest
-        container_name: scheduler
-        depends_on:
-            - app
-        command: daemon --docker
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock:ro
-    db:
-        image: mysql:8
-        container_name: db
+        image: mintopia/lanager:develop
+        container_name: lanager_scheduler
         restart: unless-stopped
-        tty: true
-        expose:
-            - "3306"
+        volumes:
+            - laravel-storage:/var/www/storage
+        depends_on:
+            - database
+        entrypoint: php scheduler.php
+    database:
+        image: mysql:5.7
+        container_name: lanager_db
+        restart: unless-stopped
         environment:
             MYSQL_DATABASE: ${DB_DATABASE:-lanager}
             MYSQL_USER: ${DB_USERNAME:-lanager}
@@ -64,12 +30,6 @@ services:
             MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
         volumes:
             - db-data:/var/lib/mysql
-            - ./configs/db/mysql.cnf:/etc/mysql/conf.d/lanager.cnf
-        networks:
-            - app-network
-networks:
-    app-network:
-        driver: bridge
 volumes:
     db-data:
         driver: local
